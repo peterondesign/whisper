@@ -195,11 +195,19 @@ export const useVoiceRecognition = () => {
           switch (event.error) {
             case 'language-not-supported':
               console.error('Language not supported:', currentLanguageRef.current);
-              setState(prev => ({ 
-                ...prev, 
-                isSupported: false, 
-                isListening: false 
-              }));
+              // Try to switch to a fallback language
+              if (currentLanguageRef.current !== 'en-US') {
+                console.log('Attempting fallback to en-US...');
+                recognition.lang = 'en-US';
+                currentLanguageRef.current = 'en-US';
+                // Don't set isSupported to false immediately, let it try again
+              } else {
+                setState(prev => ({ 
+                  ...prev, 
+                  isSupported: false, 
+                  isListening: false 
+                }));
+              }
               break;
               
             case 'not-allowed':
@@ -243,6 +251,7 @@ export const useVoiceRecognition = () => {
         };
 
         recognitionRef.current = recognition;
+        // Mark as supported since we have the API and fallback mechanisms
         setState(prev => ({ ...prev, isSupported: true }));
         
       } catch (error) {

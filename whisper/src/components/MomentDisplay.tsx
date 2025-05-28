@@ -56,16 +56,31 @@ export default function MomentDisplay({
                 </p>
                 
                 {/* Additional Details */}
-                {(moment.location || moment.emotion) && (
+                {(moment.location || moment.action || moment.thinking || moment.emotion || moment.dialogue) && (
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     {moment.location && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800">
                         📍 {moment.location}
                       </span>
                     )}
+                    {moment.action && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                        🎯 {moment.action}
+                      </span>
+                    )}
+                    {moment.thinking && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full bg-purple-100 text-purple-800">
+                        💭 {moment.thinking}
+                      </span>
+                    )}
                     {moment.emotion && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                        😊 {moment.emotion}
+                        💝 {moment.emotion}
+                      </span>
+                    )}
+                    {moment.dialogue && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full bg-pink-100 text-pink-800">
+                        💬 "{moment.dialogue}"
                       </span>
                     )}
                   </div>

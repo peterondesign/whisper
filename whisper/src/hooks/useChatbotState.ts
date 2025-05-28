@@ -86,8 +86,14 @@ export const useChatbotState = () => {
       case 'selecting_moment':
         return selectedMoment ? 'asking_location' : 'selecting_moment';
       case 'asking_location':
+        return 'asking_action';
+      case 'asking_action':
+        return 'asking_thinking';
+      case 'asking_thinking':
         return 'asking_emotion';
       case 'asking_emotion':
+        return 'asking_dialogue';
+      case 'asking_dialogue':
         return 'summarizing';
       case 'summarizing':
         return 'complete';

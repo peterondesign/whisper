@@ -2,7 +2,10 @@ export interface Moment {
   id: string;
   description: string;
   location?: string;
+  action?: string;
+  thinking?: string;
   emotion?: string;
+  dialogue?: string;
   timestamp: Date;
   confirmed: boolean;
 }
@@ -20,7 +23,11 @@ export type ChatbotState =
   | 'collecting_moments'
   | 'selecting_moment'
   | 'asking_location'
+  | 'asking_action'
+  | 'asking_thinking'
   | 'asking_emotion'
+  | 'asking_dialogue'
+  | 'free_conversation'
   | 'summarizing'
   | 'complete';
 
@@ -37,4 +44,20 @@ export interface VoiceRecognitionState {
   transcript: string;
   confidence: number;
   isSupported: boolean;
+}
+
+export interface MemoryFragment {
+  id: string;
+  type: 'location' | 'action' | 'thinking' | 'emotion' | 'dialogue' | 'context';
+  content: string;
+  confidence: number;
+  timestamp: Date;
+  momentId?: string;
+}
+
+export interface ConversationMemory {
+  fragments: MemoryFragment[];
+  buildingMoments: Moment[];
+  freeConversationStartTime?: Date;
+  totalConversationTime: number;
 }

@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useChatbotState } from '@/hooks/useChatbotState';
-import { NLPService } from '@/services/nlpService';
+import { OpenAIService } from '@/services/openaiService';
 import { StorageService } from '@/services/storageService';
+import { MemoryService } from '@/services/memoryService';
 import VoiceInput from '@/components/VoiceInput';
 import ChatMessage from '@/components/ChatMessage';
 import MomentDisplay from '@/components/MomentDisplay';
+import MemoryVisualization from '@/components/MemoryVisualization';
 import { generateId } from '@/utils/helpers';
+import { Moment, ConversationMemory } from '@/types';
 
 interface MomentsChatbotProps {
   selectedSessionId?: string | null;
@@ -28,9 +31,12 @@ export default function MomentsChatbot({ selectedSessionId }: MomentsChatbotProp
 
   const [sessionId, setSessionId] = useState(() => generateId());
   const [isProcessing, setIsProcessing] = useState(false);
+  const [conversationMemory, setConversationMemory] = useState<ConversationMemory | null>(null);
+  const [isEnhancedMode, setIsEnhancedMode] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const nlpService = NLPService.getInstance();
+  const openaiService = OpenAIService.getInstance();
   const storageService = StorageService.getInstance();
+  const memoryService = MemoryService.getInstance();
 
   // Load selected session when prop changes
   useEffect(() => {
@@ -59,14 +65,47 @@ export default function MomentsChatbot({ selectedSessionId }: MomentsChatbotProp
     }
   }, [context.moments, messages, sessionId, storageService]);
 
-  // Initialize with greeting
+  // Initialize conversation memory and greeting
   useEffect(() => {
-    if (messages.length === 0 && context.state === 'greeting') {
-      const greeting = nlpService.generateResponse('greeting');
-      addMessage(greeting, true, 'greeting');
-      updateState('collecting_moments');
+    if (!conversationMemory) {
+      setConversationMemory(memoryService.createEmptyMemory());
     }
-  }, [messages.length, context.state, addMessage, updateState, nlpService]);
+    
+    if (messages.length === 0 && context.state === 'greeting') {
+      const initializeConversation = async () => {
+        try {
+          const memory = memoryService.createEmptyMemory();
+          const response = await openaiService.generateProgressiveResponse(
+            'Hello! I\'d love to help you capture some meaningful moments from your day.',
+            {
+              state: 'greeting',
+              moments: [],
+              previousMessages: [],
+              memory
+            }
+          );
+          
+          addMessage(response.response, true, 'greeting');
+          if (response.memoryFragments && response.memoryFragments.length > 0) {
+            setConversationMemory(prev => 
+              prev ? memoryService.addMemoryFragments(prev, response.memoryFragments!) : memory
+            );
+          }
+          if (response.nextState) {
+            updateState(response.nextState);
+          } else {
+            updateState('collecting_moments');
+          }
+        } catch (error) {
+          console.error('Error initializing conversation:', error);
+          addMessage("Hello! I'd love to help you capture some meaningful moments from your day. What's something interesting that happened to you today?", true, 'greeting');
+          updateState('collecting_moments');
+        }
+      };
+      
+      initializeConversation();
+    }
+  }, [messages.length, context.state, addMessage, updateState, openaiService, memoryService, conversationMemory]);
 
   const handleUserInput = async (input: string) => {
     if (isProcessing) return;
@@ -88,181 +127,65 @@ export default function MomentsChatbot({ selectedSessionId }: MomentsChatbotProp
   };
 
   const processUserInput = async (input: string) => {
-    switch (context.state) {
-      case 'collecting_moments':
-        await handleMomentCollection(input);
-        break;
-      case 'selecting_moment':
-        await handleMomentSelection(input);
-        break;
-      case 'asking_location':
-        await handleLocationInput(input);
-        break;
-      case 'asking_emotion':
-        await handleEmotionInput(input);
-        break;
-      case 'summarizing':
-        await handleSummaryConfirmation(input);
-        break;
-      default:
-        addMessage("I'm not sure how to help with that right now.", true);
-    }
-  };
-
-  const handleMomentCollection = async (input: string) => {
-    const result = nlpService.processUserInput(input, 'moment');
-    
-    if (!result.isValid) {
-      let response = "I'd love to hear more details about that moment. ";
-      if (result.suggestions) {
-        response += result.suggestions[0];
-      }
-      addMessage(response, true, 'question');
+    if (!conversationMemory) {
+      addMessage("I'm sorry, there seems to be an issue with the conversation memory. Please try again.", true);
       return;
     }
 
-    // Add the moment
-    const moment = addMoment(result.processedText);
-    
-    // Confirm the moment
-    const confirmation = nlpService.generateResponse('momentConfirmed');
-    addMessage(confirmation, true, 'confirmation');
+    try {
+      // Use OpenAI progressive response system
+      const response = await openaiService.generateProgressiveResponse(
+        input,
+        {
+          state: context.state,
+          moments: context.moments,
+          selectedMoment: context.selectedMoment,
+          previousMessages: messages,
+          memory: conversationMemory
+        }
+      );
 
-    // Check if we need more moments
-    if (context.moments.length + 1 >= context.totalMomentsToCollect) {
-      // We have enough moments, show them and ask for selection
-      setTimeout(() => {
-        const allMomentsMessage = nlpService.generateResponse('allMomentsCollected');
-        addMessage(allMomentsMessage, true);
-        
-        setTimeout(() => {
-          const selectMessage = nlpService.generateResponse('selectMoment');
-          addMessage(selectMessage, true, 'question');
-          updateState('selecting_moment');
-        }, 1000);
-      }, 1000);
-    } else {
-      // Ask for more moments
-      setTimeout(() => {
-        const moreMessage = nlpService.generateResponse('needsMoreMoments');
-        addMessage(moreMessage, true, 'question');
-      }, 1000);
-    }
-  };
+      // Add bot response
+      addMessage(response.response, true);
 
-  const handleMomentSelection = async (input: string) => {
-    const result = nlpService.processUserInput(input, 'selection');
-    
-    if (!result.isValid) {
-      let response = "I didn't catch which moment you'd like to explore. ";
-      if (result.suggestions) {
-        response += result.suggestions[0];
+      // Update conversation memory with new fragments
+      if (response.memoryFragments && response.memoryFragments.length > 0) {
+        setConversationMemory(prev => 
+          prev ? memoryService.addMemoryFragments(prev, response.memoryFragments!) : prev
+        );
       }
-      addMessage(response, true, 'question');
-      return;
-    }
 
-    const selectedIndex = parseInt(result.processedText);
-    if (selectedIndex >= 0 && selectedIndex < context.moments.length) {
-      const selectedMoment = context.moments[selectedIndex];
-      selectMoment(selectedMoment);
-      
-      addMessage(`Great choice! Let's explore: "${selectedMoment.description}"`, true, 'confirmation');
-      
-      setTimeout(() => {
-        const locationQuestion = nlpService.generateResponse('askLocation');
-        addMessage(locationQuestion, true, 'question');
-        updateState('asking_location');
-      }, 1000);
-    } else {
-      addMessage("That number doesn't match any of your moments. Please choose 1, 2, or 3.", true, 'question');
-    }
-  };
-
-  const handleLocationInput = async (input: string) => {
-    const result = nlpService.processUserInput(input, 'location');
-    
-    if (!result.isValid) {
-      let response = "Could you tell me more about where this happened? ";
-      if (result.suggestions) {
-        response += result.suggestions[0];
+      // Handle detected moments
+      if (response.detectedMoments && response.detectedMoments.length > 0) {
+        response.detectedMoments.forEach(momentData => {
+          if (momentData.description) {
+            const moment = addMoment(momentData.description);
+            // Update the moment with extracted fields
+            updateMoment(moment.id, {
+              location: momentData.location,
+              action: momentData.action,
+              thinking: momentData.thinking,
+              emotion: momentData.emotion,
+              dialogue: momentData.dialogue
+            });
+          }
+        });
       }
-      addMessage(response, true, 'question');
-      return;
-    }
 
-    if (context.selectedMoment) {
-      updateMoment(context.selectedMoment.id, { location: result.processedText });
-      addMessage(`Perfect! I've noted that this happened at: ${result.processedText}`, true, 'confirmation');
-      
-      setTimeout(() => {
-        const emotionQuestion = nlpService.generateResponse('askEmotion');
-        addMessage(emotionQuestion, true, 'question');
-        updateState('asking_emotion');
-      }, 1000);
-    }
-  };
-
-  const handleEmotionInput = async (input: string) => {
-    const result = nlpService.processUserInput(input, 'emotion');
-    
-    if (!result.isValid) {
-      let response = "I'd love to understand your feelings better. ";
-      if (result.suggestions) {
-        response += result.suggestions[0];
+      // Update state if suggested
+      if (response.nextState) {
+        updateState(response.nextState);
       }
-      addMessage(response, true, 'question');
-      return;
-    }
 
-    if (context.selectedMoment) {
-      updateMoment(context.selectedMoment.id, { 
-        emotion: result.processedText,
-        confirmed: true 
-      });
-      
-      addMessage(`Thank you for sharing! I can feel that this moment made you feel ${result.processedText}.`, true, 'confirmation');
-      
-      setTimeout(() => {
-        const summaryMessage = nlpService.generateResponse('summary');
-        addMessage(summaryMessage, true);
-        
-        setTimeout(() => {
-          const confirmMessage = nlpService.generateResponse('confirmSummary');
-          addMessage(confirmMessage, true, 'question');
-          updateState('summarizing');
-        }, 1000);
-      }, 1000);
-    }
-  };
-
-  const handleSummaryConfirmation = async (input: string) => {
-    const isConfirmed = /^(yes|yeah|yep|correct|right|good|perfect|that's right)/i.test(input.toLowerCase());
-    
-    if (isConfirmed) {
-      addMessage("Wonderful! I've captured this beautiful moment. Would you like to explore another moment or finish here?", true);
-      
-      // Check if there are more moments to explore
-      const unconfirmedMoments = context.moments.filter(m => !m.confirmed);
-      if (unconfirmedMoments.length > 0) {
-        setTimeout(() => {
-          addMessage("You have other moments we could explore, or you can say 'finish' to see your complete session.", true, 'question');
-          updateState('selecting_moment');
-        }, 1000);
-      } else {
-        setTimeout(() => {
-          addMessage("All your moments have been captured! Thank you for sharing these beautiful memories with me.", true);
-          updateState('complete');
-        }, 1000);
-      }
-    } else {
-      addMessage("No problem! What would you like to change about this moment?", true, 'question');
-      updateState('asking_location'); // Allow them to re-enter details
+    } catch (error) {
+      console.error('Error in progressive response:', error);
+      addMessage("I'm having trouble processing that. Could you rephrase or try again?", true);
     }
   };
 
   const handleReset = () => {
     resetChat();
+    setConversationMemory(memoryService.createEmptyMemory());
     // The useEffect will trigger the greeting automatically
   };
 
@@ -315,8 +238,21 @@ export default function MomentsChatbot({ selectedSessionId }: MomentsChatbotProp
                   style={{ color: 'var(--color-text-primary)' }}
                 >
                   <p><strong>What:</strong> {context.selectedMoment.description}</p>
-                  <p><strong>Where:</strong> {context.selectedMoment.location}</p>
-                  <p><strong>How it felt:</strong> {context.selectedMoment.emotion}</p>
+                  {context.selectedMoment.location && (
+                    <p><strong>Where:</strong> {context.selectedMoment.location}</p>
+                  )}
+                  {context.selectedMoment.action && (
+                    <p><strong>Action:</strong> {context.selectedMoment.action}</p>
+                  )}
+                  {context.selectedMoment.thinking && (
+                    <p><strong>Thinking:</strong> {context.selectedMoment.thinking}</p>
+                  )}
+                  {context.selectedMoment.emotion && (
+                    <p><strong>Emotion:</strong> {context.selectedMoment.emotion}</p>
+                  )}
+                  {context.selectedMoment.dialogue && (
+                    <p><strong>Dialogue:</strong> "{context.selectedMoment.dialogue}"</p>
+                  )}
                 </div>
               </div>
             )}
@@ -402,6 +338,16 @@ export default function MomentsChatbot({ selectedSessionId }: MomentsChatbotProp
             </div>
           </div>
 
+          {/* Memory Visualization */}
+          {isEnhancedMode && conversationMemory && (
+            <div className="mb-4">
+              <MemoryVisualization 
+                memory={conversationMemory}
+                isVisible={true}
+              />
+            </div>
+          )}
+
           {/* Moments List */}
           {context.moments.length > 0 && (
             <div>
@@ -444,8 +390,16 @@ function getStateLabel(state: string): string {
       return 'Selecting Moment';
     case 'asking_location':
       return 'Asking Location';
+    case 'asking_action':
+      return 'Asking Action';
+    case 'asking_thinking':
+      return 'Asking Thoughts';
     case 'asking_emotion':
       return 'Asking Emotion';
+    case 'asking_dialogue':
+      return 'Asking Dialogue';
+    case 'free_conversation':
+      return 'Free Conversation';
     case 'summarizing':
       return 'Summarizing';
     case 'complete':

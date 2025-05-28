@@ -266,22 +266,53 @@ export default function ConversationHistory({ onSelectConversation, className = 
                           {index + 1}. {moment.description.substring(0, 80)}
                           {moment.description.length > 80 && '...'}
                         </div>
-                        {moment.location && (
-                          <div 
-                            className="mt-1"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                          >
-                            📍 {moment.location}
-                          </div>
-                        )}
-                        {moment.emotion && (
-                          <div 
-                            className="mt-1"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                          >
-                            💝 {moment.emotion}
-                          </div>
-                        )}
+                        <div className="mt-1 space-y-1">
+                          {moment.location && (
+                            <div 
+                              className="flex items-center space-x-1 text-xs"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              <span>📍</span>
+                              <span>{moment.location}</span>
+                            </div>
+                          )}
+                          {moment.action && (
+                            <div 
+                              className="flex items-center space-x-1 text-xs"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              <span>🎯</span>
+                              <span>{moment.action}</span>
+                            </div>
+                          )}
+                          {moment.thinking && (
+                            <div 
+                              className="flex items-center space-x-1 text-xs"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              <span>💭</span>
+                              <span>{moment.thinking}</span>
+                            </div>
+                          )}
+                          {moment.emotion && (
+                            <div 
+                              className="flex items-center space-x-1 text-xs"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              <span>💝</span>
+                              <span>{moment.emotion}</span>
+                            </div>
+                          )}
+                          {moment.dialogue && (
+                            <div 
+                              className="flex items-center space-x-1 text-xs"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              <span>💬</span>
+                              <span>"{moment.dialogue}"</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
