@@ -99,7 +99,7 @@ export default function MemoryVisualization({ memory, isVisible, className = "" 
           </div>
           
           <div className="space-y-2">
-            {memory.buildingMoments.map((moment, index) => (
+            {memory.buildingMoments.map((moment) => (
               <div key={moment.id} className="bg-orange-50 dark:bg-orange-900/20 rounded-md p-2">
                 <div className="text-sm text-gray-900 dark:text-white mb-1">
                   {moment.description}

@@ -70,9 +70,9 @@ export class MemoryService {
     // In a real implementation, you'd use more sophisticated NLP techniques
     
     const timeWindow = 5 * 60 * 1000; // 5 minutes
-    const relatedFragments = allFragments.filter(f => 
-      Math.abs(f.timestamp.getTime() - fragment.timestamp.getTime()) < timeWindow
-    );
+    // const relatedFragments = allFragments.filter(f => 
+    //   Math.abs(f.timestamp.getTime() - fragment.timestamp.getTime()) < timeWindow
+    // );
     
     // Create a key based on the most common content themes
     const contentWords = fragment.content.toLowerCase().split(' ');

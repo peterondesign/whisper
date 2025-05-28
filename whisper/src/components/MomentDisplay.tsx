@@ -80,7 +80,7 @@ export default function MomentDisplay({
                     )}
                     {moment.dialogue && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full bg-pink-100 text-pink-800">
-                        💬 "{moment.dialogue}"
+                        💬 &ldquo;{moment.dialogue}&rdquo;
                       </span>
                     )}
                   </div>

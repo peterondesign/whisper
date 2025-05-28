@@ -309,7 +309,7 @@ export default function ConversationHistory({ onSelectConversation, className = 
                               style={{ color: 'var(--color-text-secondary)' }}
                             >
                               <span>💬</span>
-                              <span>"{moment.dialogue}"</span>
+                              <span>&ldquo;{moment.dialogue}&rdquo;</span>
                             </div>
                           )}
                         </div>

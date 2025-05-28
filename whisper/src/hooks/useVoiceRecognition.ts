@@ -25,6 +25,10 @@ interface SpeechRecognitionAlternative {
   readonly confidence: number;
 }
 
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
 interface SpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
@@ -33,7 +37,7 @@ interface SpeechRecognition extends EventTarget {
   stop(): void;
   abort(): void;
   onresult: (event: SpeechRecognitionEvent) => void;
-  onerror: (event: any) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
   onend: () => void;
   onstart: () => void;
 }
@@ -112,7 +116,7 @@ export const useVoiceRecognition = () => {
 
           try {
             testRecognition.start();
-          } catch (error) {
+          } catch {
             clearTimeout(timeout);
             resolve(false);
           }

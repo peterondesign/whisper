@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useTheme } from '@/contexts/ThemeContext';
+// import { useTheme } from '@/contexts/ThemeContext';
 import ConversationHistory from '@/components/ConversationHistory';
 import ThemeToggle from '@/components/ThemeToggle';
 

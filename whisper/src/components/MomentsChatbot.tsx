@@ -10,7 +10,7 @@ import ChatMessage from '@/components/ChatMessage';
 import MomentDisplay from '@/components/MomentDisplay';
 import MemoryVisualization from '@/components/MemoryVisualization';
 import { generateId } from '@/utils/helpers';
-import { Moment, ConversationMemory } from '@/types';
+import { ConversationMemory } from '@/types';
 
 interface MomentsChatbotProps {
   selectedSessionId?: string | null;
@@ -32,7 +32,7 @@ export default function MomentsChatbot({ selectedSessionId }: MomentsChatbotProp
   const [sessionId, setSessionId] = useState(() => generateId());
   const [isProcessing, setIsProcessing] = useState(false);
   const [conversationMemory, setConversationMemory] = useState<ConversationMemory | null>(null);
-  const [isEnhancedMode, setIsEnhancedMode] = useState(true);
+  const [isEnhancedMode] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const openaiService = OpenAIService.getInstance();
   const storageService = StorageService.getInstance();
@@ -183,11 +183,11 @@ export default function MomentsChatbot({ selectedSessionId }: MomentsChatbotProp
     }
   };
 
-  const handleReset = () => {
-    resetChat();
-    setConversationMemory(memoryService.createEmptyMemory());
-    // The useEffect will trigger the greeting automatically
-  };
+  // const handleReset = () => {
+  //   resetChat();
+  //   setConversationMemory(memoryService.createEmptyMemory());
+  //   // The useEffect will trigger the greeting automatically
+  // };
 
   return (
     <div 
@@ -251,7 +251,7 @@ export default function MomentsChatbot({ selectedSessionId }: MomentsChatbotProp
                     <p><strong>Emotion:</strong> {context.selectedMoment.emotion}</p>
                   )}
                   {context.selectedMoment.dialogue && (
-                    <p><strong>Dialogue:</strong> "{context.selectedMoment.dialogue}"</p>
+                    <p><strong>Dialogue:</strong> &ldquo;{context.selectedMoment.dialogue}&rdquo;</p>
                   )}
                 </div>
               </div>
