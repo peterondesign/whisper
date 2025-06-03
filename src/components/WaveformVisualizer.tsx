@@ -12,7 +12,7 @@ export default function WaveformVisualizer({ isActive }: WaveformVisualizerProps
   const analyserRef = useRef<AnalyserNode | null>(null);
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | null>(null);
 
   // Start/stop audio analysis based on isActive
   useEffect(() => {
@@ -44,7 +44,8 @@ export default function WaveformVisualizer({ isActive }: WaveformVisualizerProps
 
       analyzeAudio();
     } catch (error) {
-      // Fail silently if user blocks mic
+      // Fail silently if user blocks mic access
+      console.debug('Microphone access denied or unavailable:', error);
     }
   };
 
